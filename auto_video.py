@@ -43,7 +43,7 @@ def create_video_from_text(text, audio_file, output_path):
     # Teks overlay
     txt_clip = TextClip(
         wrapped, fontsize=FONT_SIZE, color=FONT_COLOR, size=(VIDEO_SIZE[0]-100, None),
-        method='caption', align='center'
+        method='caption', align='center', use_builtin=True
     ).set_position('center').set_duration(duration)
 
     video = CompositeVideoClip([bg, txt_clip]).set_audio(audio_clip)
