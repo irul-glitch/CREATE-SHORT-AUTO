@@ -1,6 +1,7 @@
 moviepy==1.0.3          # Editing & membuat video
 gTTS==2.5.3             # Text-to-Speech Google (bisa diganti pyttsx3 jika offline)
 pydrive2==1.20.0        # Sinkronisasi ke Google Drive
+tqdm==4.66.1
 google-api-python-client==2.154.0   # API YouTube
 google-auth==2.35.0
 google-auth-oauthlib==1.2.1
