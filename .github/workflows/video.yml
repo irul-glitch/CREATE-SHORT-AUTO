@@ -1,0 +1,6 @@
+      - name: Generate and upload video
+        run: |
+          python scripts/auto_video.py
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
