@@ -25,7 +25,7 @@ jobs:
           sudo apt-get install -y imagemagick fonts-dejavu
           convert --version
 
-      # 4. Perbaiki policy ImageMagick (echo method)
+      # 4. Perbaiki policy ImageMagick
       - name: Fix ImageMagick policy
         run: |
           POLICY=/etc/ImageMagick-6/policy.xml
@@ -47,20 +47,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 6. Konfigurasi environment
-      - name: Configure environment variables
+      # 6. Jalankan script utama (sertakan secrets sebagai environment)
+      - name: Run auto_video.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-        run: echo "✅ Environment configured"
-
-      # 7. Jalankan script utama
-      - name: Run auto_video.py
         run: python auto_video.py
 
-      # 8. Upload output sebagai artifacts
+      # 7. Upload output sebagai artifacts
       - name: Upload generated videos as artifacts
         uses: actions/upload-artifact@v4
         with:
