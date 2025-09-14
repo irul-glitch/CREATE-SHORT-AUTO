@@ -1,0 +1,8 @@
+moviepy==1.0.3          # Editing & membuat video
+gTTS==2.5.3             # Text-to-Speech Google (bisa diganti pyttsx3 jika offline)
+pydrive2==1.20.0        # Sinkronisasi ke Google Drive
+google-api-python-client==2.154.0   # API YouTube
+google-auth==2.35.0
+google-auth-oauthlib==1.2.1
+python-telegram-bot==21.4 # Kirim laporan ke Telegram
+requests==2.32.3        # HTTP requests (opsional, untuk API tambahan)
