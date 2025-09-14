@@ -1,7 +1,6 @@
 name: Auto Video Creator
 
 on:
-  
   workflow_dispatch:
 
 jobs:
@@ -16,12 +15,24 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Install ImageMagick
-      run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+    - name: Install dependencies (ImageMagick & Fonts)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y imagemagick fonts-dejavu
+        # Tampilkan versi ImageMagick untuk debugging
+        convert --version
+
+    - name: Configure ImageMagick policy
+      run: |
+        # Perbaiki error keamanan convert-im6.q16 dengan mengedit kebijakan
+        sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true
+        sudo sed -i 's/rights="none" pattern="LABEL"/rights="read|write" pattern="LABEL"/' /etc/ImageMagick-6/policy.xml || true
+
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
 
     - name: Configure environment
       env:
@@ -29,9 +40,9 @@ jobs:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
         GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-      run: echo "Environment ready"
+      run: echo "Environment configured"
 
-    - name: Run auto_video
+    - name: Run auto_video.py
       run: python auto_video.py
 
     - name: Upload artifacts to GitHub (backup)
