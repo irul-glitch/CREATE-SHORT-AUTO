@@ -1,6 +1,52 @@
-      - name: Generate and upload video
+name: Create LifeHack Shorts (2x/day)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout kode
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Debug isi repo (opsional, berguna saat error)
+      - name: List files
         run: |
-          python scripts/auto_video.py
+          echo "Working directory:"
+          pwd
+          echo "Files:"
+          ls -R
+
+      # 3. Install sistem dependency
+      - name: Install ffmpeg, ImageMagick, dan fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg imagemagick fonts-dejavu-core
+
+      # 4. Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 5. Install Python dependencies
+      - name: Install Python packages
+        run: |
+          pip install moviepy gTTS pydrive2 tqdm
+
+      # 6. Jalankan skrip utama untuk membuat & upload video
+      - name: Generate and upload video
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          python auto_video.py
+
+      # 7. Tampilkan isi folder output setelah selesai
+      - name: List output folder
+        run: |
+          echo "Isi folder output:"
+          ls -lh output || echo "Folder output belum ada."
