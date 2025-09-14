@@ -8,62 +8,61 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout repository
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # 1. Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # 2. Set up Python
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    # 3. Install ImageMagick dan font
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y imagemagick fonts-dejavu
-        convert --version
+      # 3. Install ImageMagick dan font
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick fonts-dejavu
+          convert --version
 
-    # 4. Perbaiki policy ImageMagick
-    - name: Fix ImageMagick policy (allow label/text)
-      run: |
-        POLICY=/etc/ImageMagick-6/policy.xml
-        if [ -f "$POLICY" ]; then
-          sudo mv "$POLICY" "${POLICY}.bak"
-          sudo tee "$POLICY" > /dev/null <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<policymap>
-  <policy domain="delegate" rights="read|write" pattern="*" />
-  <policy domain="coder" rights="read|write" pattern="*" />
-  <policy domain="path" rights="read|write" pattern="*" />
-</policymap>
-EOF
-          sudo cat "$POLICY"
-        fi
+      # 4. Perbaiki policy ImageMagick (echo method)
+      - name: Fix ImageMagick policy
+        run: |
+          POLICY=/etc/ImageMagick-6/policy.xml
+          if [ -f "$POLICY" ]; then
+            sudo mv "$POLICY" "${POLICY}.bak"
+            {
+              echo '<?xml version="1.0" encoding="UTF-8"?>'
+              echo '<policymap>'
+              echo '  <policy domain="delegate" rights="read|write" pattern="*" />'
+              echo '  <policy domain="coder" rights="read|write" pattern="*" />'
+              echo '  <policy domain="path" rights="read|write" pattern="*" />'
+              echo '</policymap>'
+            } | sudo tee "$POLICY" > /dev/null
+          fi
 
-    # 5. Install Python dependencies
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      # 5. Install Python dependencies
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    # 6. Konfigurasi environment
-    - name: Configure environment variables
-      env:
-        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
-        GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-      run: echo "✅ Environment configured"
+      # 6. Konfigurasi environment
+      - name: Configure environment variables
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: echo "✅ Environment configured"
 
-    # 7. Jalankan script utama
-    - name: Run auto_video.py
-      run: python auto_video.py
+      # 7. Jalankan script utama
+      - name: Run auto_video.py
+        run: python auto_video.py
 
-    # 8. Upload output sebagai artifacts
-    - name: Upload generated videos as artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: videos
-        path: output/
+      # 8. Upload output sebagai artifacts
+      - name: Upload generated videos as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos
+          path: output/
