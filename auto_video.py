@@ -1,17 +1,16 @@
 import os, random, textwrap, datetime, json
 from pathlib import Path
 from gtts import gTTS
-from moviepy.editor import (
-    TextClip, CompositeVideoClip, AudioFileClip, ColorClip
-)
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
+from moviepy.editor import TextClip, CompositeVideoClip, AudioFileClip, ColorClip
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
 # ---------- KONFIGURASI ----------
 PROMPTS_DIR = Path("prompts")
 OUTPUT_DIR = Path("output")
 ASSET_MUSIC = Path("assets/music.mp3")  # opsional
-VIDEO_SIZE = (1080, 1920)              # 9:16
+VIDEO_SIZE = (1080, 1920)               # 9:16
 FONT_SIZE = 70
 FONT_COLOR = 'white'
 BG_COLOR = (0, 0, 0)
@@ -37,7 +36,7 @@ def create_video_from_text(text, audio_file, output_path):
     # Background
     bg = ColorClip(size=VIDEO_SIZE, color=BG_COLOR, duration=duration)
 
-    # Teks overlay (hapus use_builtin, gunakan method='caption')
+    # Teks overlay
     txt_clip = TextClip(
         wrapped,
         fontsize=FONT_SIZE,
@@ -45,17 +44,15 @@ def create_video_from_text(text, audio_file, output_path):
         size=(VIDEO_SIZE[0] - 100, None),
         method='caption',
         align='center',
-        font='DejaVu-Sans'  # pastikan font tersedia
+        font='DejaVu-Sans'
     ).set_position('center').set_duration(duration)
 
     video = CompositeVideoClip([bg, txt_clip]).set_audio(audio_clip)
 
-    # Tambahkan musik opsional
+    # Musik opsional
     if ASSET_MUSIC.exists():
         music = AudioFileClip(str(ASSET_MUSIC)).volumex(0.2).set_duration(duration)
-        final_audio = audio_clip.volumex(1.0)
-        # Kombinasi manual: tumpuk musik dengan voiceover
-        video = video.set_audio(final_audio)  # Bisa diganti dengan composite audio jika perlu
+        video = video.set_audio(audio_clip.volumex(1.0))  # Gunakan voice utama saja
 
     video.write_videofile(
         str(output_path),
@@ -65,33 +62,28 @@ def create_video_from_text(text, audio_file, output_path):
     )
 
 def upload_to_drive(file_path, folder_id=None):
-    gauth = GoogleAuth()
     creds_json = os.environ.get("GDRIVE_CREDENTIALS")
     if not creds_json:
         raise ValueError("GDRIVE_CREDENTIALS env tidak ditemukan.")
+
     creds_data = json.loads(creds_json)
+    creds = service_account.Credentials.from_service_account_info(
+        creds_data,
+        scopes=["https://www.googleapis.com/auth/drive.file"]
+    )
 
-    tmp_credentials = "creds.json"
-    with open(tmp_credentials, "w") as f:
-        json.dump(creds_data, f)
+    service = build("drive", "v3", credentials=creds)
+    file_metadata = {"name": os.path.basename(file_path)}
+    if folder_id:
+        file_metadata["parents"] = [folder_id]
 
-    gauth.LoadCredentialsFile(tmp_credentials)
-    if gauth.credentials is None:
-        raise ValueError("Kredensial Google Drive tidak valid.")
-    elif gauth.access_token_expired:
-        gauth.Refresh()
-    else:
-        gauth.Authorize()
+    media = MediaFileUpload(file_path, resumable=True)
+    uploaded = service.files().create(
+        body=file_metadata, media_body=media, fields="id"
+    ).execute()
 
-    drive = GoogleDrive(gauth)
-    file_name = os.path.basename(file_path)
-    gfile = drive.CreateFile({
-        'title': file_name,
-        'parents': [{'id': folder_id}] if folder_id else []
-    })
-    gfile.SetContentFile(file_path)
-    gfile.Upload()
-    print(f"Uploaded to Drive: {file_name}")
+    file_id = uploaded.get("id")
+    print(f"Uploaded to Drive: https://drive.google.com/file/d/{file_id}")
 
 def main():
     prompts = load_prompts()
@@ -100,7 +92,6 @@ def main():
         return
 
     selected = prompts[:VIDEOS_PER_RUN]
-
     for prompt_file in selected:
         with open(prompt_file, "r", encoding="utf-8") as f:
             text = f.read().strip()
