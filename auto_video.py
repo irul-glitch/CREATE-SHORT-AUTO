@@ -5,6 +5,7 @@ from moviepy.editor import TextClip, CompositeVideoClip, AudioFileClip, ColorCli
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from telegram import Bot
 
 # ---------- KONFIGURASI ----------
 PROMPTS_DIR = Path("prompts")
@@ -17,8 +18,21 @@ BG_COLOR = (0, 0, 0)
 VIDEOS_PER_RUN = 2
 GDRIVE_FOLDER_ID = os.environ.get("GDRIVE_FOLDER_ID", None)
 
+# Telegram
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
 OUTPUT_DIR.mkdir(exist_ok=True)
 # ---------------------------------
+
+def kirim_laporan(pesan: str):
+    """Kirim laporan ke Telegram jika token dan chat ID tersedia."""
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            bot = Bot(token=TELEGRAM_TOKEN)
+            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=pesan)
+        except Exception as e:
+            print(f"Gagal kirim laporan Telegram: {e}")
 
 def load_prompts():
     return sorted(PROMPTS_DIR.glob("*.txt"))
@@ -83,12 +97,15 @@ def upload_to_drive(file_path, folder_id=None):
     ).execute()
 
     file_id = uploaded.get("id")
-    print(f"Uploaded to Drive: https://drive.google.com/file/d/{file_id}")
+    drive_url = f"https://drive.google.com/file/d/{file_id}"
+    print(f"Uploaded to Drive: {drive_url}")
+    return drive_url
 
 def main():
     prompts = load_prompts()
     if not prompts:
         print("Tidak ada file prompt di folder prompts/")
+        kirim_laporan("❌ Tidak ada file prompt ditemukan.")
         return
 
     selected = prompts[:VIDEOS_PER_RUN]
@@ -109,13 +126,17 @@ def main():
         create_video_from_text(text, str(audio_file), video_file)
 
         print("▶ Upload ke Google Drive")
-        upload_to_drive(str(video_file), folder_id=GDRIVE_FOLDER_ID)
+        drive_url = upload_to_drive(str(video_file), folder_id=GDRIVE_FOLDER_ID)
+
+        # Laporan Telegram
+        kirim_laporan(f"✅ Video berhasil dibuat dan diupload!\n\nNama: {video_file.name}\nDrive: {drive_url}")
 
         done_dir = PROMPTS_DIR / "done"
         done_dir.mkdir(exist_ok=True)
         prompt_file.rename(done_dir / prompt_file.name)
 
     print("✅ Semua video selesai diproses.")
+    kirim_laporan("🎉 Semua video selesai diproses.")
 
 if __name__ == "__main__":
     main()
