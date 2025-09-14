@@ -1,9 +1,16 @@
-moviepy==1.0.3          # Editing & membuat video
+# --- Video & Audio ---
+moviepy==1.0.3          # Untuk editing & membuat video
 gTTS==2.5.3             # Text-to-Speech Google (bisa diganti pyttsx3 jika offline)
-pydrive2==1.20.0        # Sinkronisasi ke Google Drive
-tqdm==4.66.1
-google-api-python-client==2.154.0   # API YouTube
-google-auth==2.35.0
+
+# --- Google Drive Upload ---
+pydrive2==1.20.0        # Upload & sinkronisasi ke Google Drive
+google-auth==2.35.0     # Autentikasi Google
 google-auth-oauthlib==1.2.1
-python-telegram-bot==21.4 # Kirim laporan ke Telegram
-requests==2.32.3        # HTTP requests (opsional, untuk API tambahan)
+google-api-python-client==2.154.0   # Client API Google (pydrive2 butuh ini)
+
+# --- Telegram Report ---
+python-telegram-bot==21.4   # Untuk kirim laporan otomatis ke Telegram
+
+# --- Utilitas tambahan ---
+tqdm==4.66.1            # Progress bar opsional
+requests==2.32.3        # HTTP requests opsional (misal cek API eksternal)
