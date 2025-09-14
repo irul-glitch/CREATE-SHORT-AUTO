@@ -17,6 +17,7 @@ FONT_COLOR = 'white'
 BG_COLOR = (0, 0, 0)
 VIDEOS_PER_RUN = 2
 GDRIVE_FOLDER_ID = os.environ.get("GDRIVE_FOLDER_ID", None)
+GDRIVE_FOLDER_NAME = "AutoVideos"       # akan dibuat jika folder_id kosong / tidak ada
 
 # Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -66,7 +67,7 @@ def create_video_from_text(text, audio_file, output_path):
     # Musik opsional
     if ASSET_MUSIC.exists():
         music = AudioFileClip(str(ASSET_MUSIC)).volumex(0.2).set_duration(duration)
-        video = video.set_audio(audio_clip.volumex(1.0))  # Gunakan voice utama saja
+        video = video.set_audio(audio_clip.volumex(1.0))  # gunakan voice utama saja
 
     video.write_videofile(
         str(output_path),
@@ -75,27 +76,52 @@ def create_video_from_text(text, audio_file, output_path):
         audio_codec="aac"
     )
 
-def upload_to_drive(file_path, folder_id=None):
+def get_drive_service():
     creds_json = os.environ.get("GDRIVE_CREDENTIALS")
     if not creds_json:
         raise ValueError("GDRIVE_CREDENTIALS env tidak ditemukan.")
-
     creds_data = json.loads(creds_json)
     creds = service_account.Credentials.from_service_account_info(
         creds_data,
-        scopes=["https://www.googleapis.com/auth/drive.file"]
+        scopes=["https://www.googleapis.com/auth/drive"]
     )
-
     service = build("drive", "v3", credentials=creds)
-    file_metadata = {"name": os.path.basename(file_path)}
-    if folder_id:
-        file_metadata["parents"] = [folder_id]
+    return service
 
+def ensure_drive_folder(service, folder_id=None, folder_name="AutoVideos"):
+    """Pastikan folder ada, jika tidak ada, buat baru."""
+    if folder_id:
+        # cek apakah folder ada
+        try:
+            service.files().get(fileId=folder_id, supportsAllDrives=True).execute()
+            return folder_id
+        except Exception:
+            print("Folder ID tidak ditemukan, akan dibuat baru.")
+    
+    # buat folder baru di Drive/Shared Drive
+    file_metadata = {
+        "name": folder_name,
+        "mimeType": "application/vnd.google-apps.folder"
+    }
+    folder = service.files().create(
+        body=file_metadata,
+        fields="id",
+        supportsAllDrives=True
+    ).execute()
+    print(f"Folder baru dibuat: {folder_name} (ID: {folder['id']})")
+    return folder["id"]
+
+def upload_to_drive(file_path, folder_id=None):
+    service = get_drive_service()
+    folder_id = ensure_drive_folder(service, folder_id, folder_name=GDRIVE_FOLDER_NAME)
+    file_metadata = {"name": os.path.basename(file_path), "parents": [folder_id]}
     media = MediaFileUpload(file_path, resumable=True)
     uploaded = service.files().create(
-        body=file_metadata, media_body=media, fields="id"
+        body=file_metadata,
+        media_body=media,
+        fields="id",
+        supportsAllDrives=True
     ).execute()
-
     file_id = uploaded.get("id")
     drive_url = f"https://drive.google.com/file/d/{file_id}"
     print(f"Uploaded to Drive: {drive_url}")
