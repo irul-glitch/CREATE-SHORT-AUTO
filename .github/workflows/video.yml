@@ -1,48 +1,54 @@
 name: Auto Video Creator
 
 on:
-  workflow_dispatch:   # Jalankan manual dari tab Actions
+  workflow_dispatch: # Jalankan manual dari tab Actions
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+    # 1. Checkout repository
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # 2. Set up Python
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
+    # 3. Install ImageMagick dan font
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        # Install ImageMagick dan font bawaan untuk MoviePy
         sudo apt-get install -y imagemagick fonts-dejavu
-        # Tampilkan versi untuk debugging
         convert --version
 
+    # 4. Perbaiki policy ImageMagick
     - name: Fix ImageMagick policy (allow label/text)
       run: |
         POLICY=/etc/ImageMagick-6/policy.xml
         if [ -f "$POLICY" ]; then
           sudo mv "$POLICY" "${POLICY}.bak"
-          echo '<?xml version="1.0" encoding="UTF-8"?>
+          sudo tee "$POLICY" > /dev/null <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
 <policymap>
   <policy domain="delegate" rights="read|write" pattern="*" />
   <policy domain="coder" rights="read|write" pattern="*" />
   <policy domain="path" rights="read|write" pattern="*" />
-</policymap>' | sudo tee "$POLICY"
+</policymap>
+EOF
           sudo cat "$POLICY"
         fi
 
+    # 5. Install Python dependencies
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    # 6. Konfigurasi environment
     - name: Configure environment variables
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -51,9 +57,11 @@ jobs:
         GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
       run: echo "✅ Environment configured"
 
+    # 7. Jalankan script utama
     - name: Run auto_video.py
       run: python auto_video.py
 
+    # 8. Upload output sebagai artifacts
     - name: Upload generated videos as artifacts
       uses: actions/upload-artifact@v4
       with:
